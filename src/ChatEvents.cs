@@ -252,7 +252,7 @@ namespace Warehouse
                 PendingTradeGiveItems.AddRange(items.Select(k => k.ItemId));
                 PendingRetrieveCommand = chatMessage;
                 SendChatCommand($"/t {chatMessage.ChatterName}, switching to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s)");
-                SendChatCommand($"switching to {firstItem.CharId} to retrieve {PendingTradeGiveItems.Count} item(s)");
+                SendChatCommand($"switching to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s)");
                 CharToLogin = firstItem.CharId;
                 Core.Actions.Logout();
             }
