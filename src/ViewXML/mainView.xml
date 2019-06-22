@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<view icon="27042" title="warehouse" width="300" height="270">
+  <control progid="DecalControls.FixedLayout" clipped="TestButton">
+    <!--<control progid="DecalControls.Checkbox" name="cbLogPlayersNearby" left="16" top="16" width="230" height="24" text="Log when players nearby" fontstyle="bold"/>
+    <control progid="DecalControls.Checkbox" name="cbLogOnDeath" left="16" top="40" width="230" height="24" text="Log on death" fontstyle="bold"/>
+    <control progid="DecalControls.StaticText" name="stNumPlayers1" fontface="Courier New" left="50" top="64" width="100" height="25" fontstyle="bold" text="#"/>
+    <control progid="DecalControls.StaticText" name="stNumPlayers2" fontface="Courier New" left="100" top="64" width="100" height="25" text=" Players Nearby"/>
+    <control progid="DecalControls.Checkbox" name="cbLogBackIn" left="16" top="89" width="230" height="24" text="Log back in after a few minutes" fontstyle="bold"/>
+    <control progid="DecalControls.Checkbox" name="cbPressPauseOnLogIn" left="16" top="113" width="230" height="24" text="Press Pause on login" fontstyle="bold"/>
+    <control progid="DecalControls.StaticText" name="stDoingNow1" fontface="Courier New" left="16" top="137" width="100" height="25" text="DoingNow: "/>
+    <control progid="DecalControls.StaticText" name="stDoingNow2" fontface="Courier New" left="80" top="137" width="200" height="25" fontstyle="bold" text="Starting"/>
+    <control progid="DecalControls.PushButton" name="btnStart" left="16" top="162" width="100" height="24" textcolor="16777215" text="Start warehouse"/>
+    <control progid="DecalControls.PushButton" name="btnStop" left="132" top="162" width="100" height="24" textcolor="16777215" text="Stop warehouse"/>-->
+    <control progid="DecalControls.PushButton" name="btnDebug" left="132" top="190" width="100" height="24" textcolor="16777215" text="debug"/>
+  </control>
+</view>
