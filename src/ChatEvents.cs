@@ -18,6 +18,88 @@ namespace Warehouse
         }
         private void OutboundChat(object sender, ChatParserInterceptEventArgs e)
         {
+            string cmd = e.Text;
+            if (cmd.StartsWith("@") || cmd.StartsWith("/"))
+            {
+                cmd = cmd.Substring(1);
+                if (cmd.ToLower().StartsWith("whallowretrieve"))
+                {
+                    e.Eat = true;
+                    cmd = cmd.Substring(15);
+                    bool? allow = ParseBool(cmd);
+                    if (!allow.HasValue)
+                    {
+                        Log("warehouse setting value unknown, example:  @whallowretrieve yes");
+                        return;
+                    }
+                    AllowRetrieve = allow.Value;
+                    Log(DBGetSetting("allowretrieve").ToString());
+                }
+                else if (cmd.ToLower().StartsWith("whplayerdetectionjump"))
+                {
+                    e.Eat = true;
+                    cmd = cmd.Substring(21);
+                    bool? jump = ParseBool(cmd);
+                    if (!jump.HasValue)
+                    {
+                        Log("warehouse setting value unknown, example:  @whplayerdetectionjump yes");
+                        return;
+                    }
+                    PlayerDetectionJump = jump.Value;
+                    Log(DBGetSetting("playerdetectionjump").ToString());
+                }
+                else if (cmd.ToLower().StartsWith("whallowjumpcmd"))
+                {
+                    e.Eat = true;
+                    cmd = cmd.Substring(14);
+                    bool? jump = ParseBool(cmd);
+                    if (!jump.HasValue)
+                    {
+                        Log("warehouse setting value unknown, example:  @whallowjumpcmd yes");
+                        return;
+                    }
+                    AllowJumpCommand = jump.Value;
+                    Log(DBGetSetting("allowjumpcmd").ToString());
+                }
+            }
+        }
+        private static bool? ParseBool(string inp)
+        {
+            inp = inp.ToLower().Trim();
+            bool? val = null;
+            if (inp == "y")
+            {
+                val = true;
+            }
+            else if (inp == "n")
+            {
+                val = false;
+            }
+            else if (inp == "1")
+            {
+                val = true;
+            }
+            else if (inp == "0")
+            {
+                val = false;
+            }
+            else if (inp == "yes")
+            {
+                val = true;
+            }
+            else if (inp == "no")
+            {
+                val = false;
+            }
+            else if (inp == "true")
+            {
+                val = true;
+            }
+            else if (inp == "false")
+            {
+                val = false;
+            }
+            return val;
         }
         private void InboundChat(object sender, ChatTextInterceptEventArgs e)
         {
@@ -51,7 +133,15 @@ namespace Warehouse
         {
             if (chatMessage.Message.ToLower() == "jump")
             {
-                Jump();
+                if (AllowJumpCommand)
+                {
+                    Jump();
+                }
+                else
+                {
+                    SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, jump command is disabled.");
+                    return;
+                }
             }
             else if (chatMessage.Message.ToLower() == "tog")
             {
@@ -105,7 +195,7 @@ namespace Warehouse
                     SendChatCommand($"/t {chatterName}, incorrect char specific retrieval, use: /t {Core.CharacterFilter.Name}, retrieve charname,itemname");
                     return null;
                 }
-                searchCharacter = DBSearchChars(db, searchForChar);
+                searchCharacter = DBSearchChars(searchForChar);
                 if (searchCharacter == null)
                 {
                     SendChatCommand($"/t {chatterName}, char specific retrieval failed: did not find character: {searchForChar}");
@@ -114,12 +204,17 @@ namespace Warehouse
                 parameters = parameters.Substring(parameters.IndexOf(",") + 1).Trim();
                 searchBy = DBSearchItemsBy.SubstringCharId;
             }
-            return DBSearchItems(db, parameters, (searchCharacter != null) ? searchCharacter.Id : 0, searchBy)
+            return DBSearchItems(parameters, (searchCharacter != null) ? searchCharacter.Id : 0, searchBy)
                 .Where(k => WarehouseFilterGlobals.Characters.Any(g => g.Id == k.CharId))
                 .OrderBy(k => k.ItemName).ToList();
         }
         private void Retrieve(ChatMessage chatMessage)
         {
+            if (!AllowRetrieve)
+            {
+                SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, retrieval command is disabled.");
+                return;
+            }
             string parameters = chatMessage.Message.Trim().Substring(8).Trim();
             List<Item> items = SearchFor(parameters, chatMessage.ChatterName);
             Tell(items, chatMessage.ChatterName);
@@ -205,6 +300,17 @@ namespace Warehouse
                     break;
                 case "switch":
                     SwitchCharacter(chatMessage);
+                    break;
+                case "jump":
+                    if (AllowJumpCommand)
+                    {
+                        Jump();
+                    }
+                    else
+                    {
+                        SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, jump command is disabled.");
+                        return;
+                    }
                     break;
                 default:
                     HandleTradeCommand(command.Trim(), predicate.Trim(), chatMessage);
@@ -334,13 +440,20 @@ namespace Warehouse
 
             }
         }
+        private string VersionString
+        {
+            get
+            {
+                Version ver2 = Assembly.GetAssembly(typeof(PluginCore)).GetName().Version;
+                return $"{ver2.Major}.{ver2.Minor}";
+            }
+        }
         private void SayHelp(bool meta = true, bool bannerOnly = false)
         {
             string ver = "";
             if (!meta)
             {
-                Version ver2 = Assembly.GetAssembly(typeof(PluginCore)).GetName().Version;
-                ver = $"{ver2.Major}.{ver2.Minor}";
+                ver = VersionString;
             }
             if (bannerOnly)
             {

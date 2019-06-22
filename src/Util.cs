@@ -7,6 +7,20 @@ namespace Warehouse
 {
     public partial class PluginCore : PluginBase
     {
+        private const string validFileChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ _-[].01234567890";
+        private static string MakeValidFileName(string name)
+        {
+            string t = "";
+            foreach (char c in name)
+            {
+                if (validFileChars.Contains(c.ToString()))
+                    t += c;
+                else
+                    t += "_";
+            }
+            t = t.TrimEnd('.');
+            return t.Trim();
+        }
         private void Ding()
         {
             System.Media.SoundPlayer myPlayer = new System.Media.SoundPlayer

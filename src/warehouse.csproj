@@ -8,7 +8,7 @@
     <ProjectGuid>{FA0B67C6-B99E-4A0E-8B06-07C218F4541B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>warehouse</RootNamespace>
+    <RootNamespace>Warehouse</RootNamespace>
     <AssemblyName>Warehouse</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
@@ -84,6 +84,7 @@
     <Compile Include="charStats.cs" />
     <Compile Include="ChatEvents.cs" />
     <Compile Include="ChatMessage.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="Database\Database.cs" />
     <Compile Include="Database\DBSyncAction.cs" />
     <Compile Include="EnumWindows.cs" />
@@ -167,10 +168,8 @@
     <PreBuildEvent>
     </PreBuildEvent>
     <PostBuildEvent>mkdir C:\Games\warehouse
-Robocopy /S $(TargetDir) C:\Games\warehouse
-rem COPY  /Y $(TargetDir)\*.* "C:\Games\warehouse\"
+Robocopy /S $(TargetDir) "C:\Games\Decal Plugins\Warehouse"
 mkdir "C:\vboxshared\warehouse\"
-rem COPY  /Y $(TargetDir)\*.* "C:\vboxshared\warehouse\"
 Robocopy /S $(TargetDir) C:\vboxshared\warehouse\
 echo fresh &gt; "C:\vboxshared\warehouse\foldersync.force"
 set errorlevel=0</PostBuildEvent>

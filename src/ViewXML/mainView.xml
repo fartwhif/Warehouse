@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<view icon="27042" title="warehouse" width="300" height="270">
+<view icon="27042" title="Warehouse" width="300" height="270">
   <control progid="DecalControls.FixedLayout" clipped="TestButton">
     <!--<control progid="DecalControls.Checkbox" name="cbLogPlayersNearby" left="16" top="16" width="230" height="24" text="Log when players nearby" fontstyle="bold"/>
     <control progid="DecalControls.Checkbox" name="cbLogOnDeath" left="16" top="40" width="230" height="24" text="Log on death" fontstyle="bold"/>

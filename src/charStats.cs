@@ -151,6 +151,7 @@ namespace Warehouse
             loggedIn = false;
             LoginAttempted = false;
             prevPlayerCount = 0;
+            FirstInner = true;
         }
         private void CharacterFilter_SpellbookChange(object sender, SpellbookEventArgs e)
         {

@@ -35,6 +35,7 @@ namespace Warehouse
         private ChatMessage PendingRetrieveCommand = null;
         private Queue<WorldObject> PendingItemsToTradeAdd2 = new Queue<WorldObject>();
         private int[] GivingItems = null;
+        private bool FirstInner = true;
 
         private void DoLoginStuff()
         {
@@ -136,7 +137,7 @@ namespace Warehouse
                 DestroyCharStats();
                 DestroyWorldFilter();
 
-                DBClose();
+                //DBClose();
             }
             catch (Exception ex)
             {
@@ -147,6 +148,13 @@ namespace Warehouse
         {
             if (loggedIn && TimeSinceLoginStarted != null && TimeSinceLoginStarted.Elapsed.TotalSeconds > 13)
             {
+                if (FirstInner)
+                {
+                    Log($"CAUTION: Warehouse {VersionString} is running");
+                    Log($"Anyone near you can take all your non-attuned items.");
+                    Log($"Commands: whallowretrieve, whplayerdetectionjump, whallowjumpcmd");
+                    FirstInner = false;
+                }
                 if (PendingRetrieveCommand != null && CharToLogin != null && Core.CharacterFilter.Id == CharToLogin.Value && PendingTradeGiveItems.Count > 0)
                 {
                     TradeGiveItem(PendingRetrieveCommand.ChatterId, PendingRetrieveCommand.ChatterName, PendingTradeGiveItems.ToArray());
@@ -159,24 +167,27 @@ namespace Warehouse
                     CharToLogin = null;
                 }
 
-                #region nearby player check
-                try
+                if (PlayerDetectionJump)
                 {
-                    WorldObjectCollection woc = Core.WorldFilter.GetByObjectClass(ObjectClass.Player);
-                    int playerCount = woc.Quantity;
-                    if (prevPlayerCount != playerCount)
+                    #region nearby player check
+                    try
                     {
-                        prevPlayerCount = playerCount;
-                        WantToJump = true;
+                        WorldObjectCollection woc = Core.WorldFilter.GetByObjectClass(ObjectClass.Player);
+                        int playerCount = woc.Quantity;
+                        if (prevPlayerCount != playerCount)
+                        {
+                            prevPlayerCount = playerCount;
+                            WantToJump = true;
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        errorLogging.LogError(ErrorLogFile, ex);
+                    }
+                    #endregion
                 }
-                catch (Exception ex)
-                {
-                    errorLogging.LogError(ErrorLogFile, ex);
-                }
-                #endregion
 
-                if (db != null && !ItemScanInProgress && (TimeSinceScanFinished == null || TimeSinceScanFinished.Elapsed > TimeSpan.FromMinutes(5)))
+                if (!ItemScanInProgress && (TimeSinceScanFinished == null || TimeSinceScanFinished.Elapsed > TimeSpan.FromMinutes(5)))
                 {
                     WantToSyncItems = true;
                 }
@@ -211,14 +222,14 @@ namespace Warehouse
             });
             foreach (Item item in items)
             {
-                rep.Increment(DBInsertOrUpdateItem(db, item));
+                rep.Increment(DBInsertOrUpdateItem(item));
             }
-            List<Item> dbItems = DBSelectItemsByCharId(db, Core.CharacterFilter.Id);
+            List<Item> dbItems = DBSelectItemsByCharId(Core.CharacterFilter.Id);
             foreach (Item dbItem in dbItems)
             {
                 if (!items.Any(k => k.ItemId == dbItem.ItemId))
                 {
-                    DBDeleteItem(db, dbItem.DbId);
+                    DBDeleteItem(dbItem.DbId);
                     rep.Increment(DBSyncAction.Delete);
                 }
             }
