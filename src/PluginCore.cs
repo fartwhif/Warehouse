@@ -13,6 +13,7 @@ namespace Warehouse
         private int TradePartnerId = 0;
         private string TradePartnerName = "";
         private Stopwatch prevTradeTime = Stopwatch.StartNew();
+        private System.Windows.Forms.Timer StackTimer = null;
         private System.Windows.Forms.Timer CramTimer = null;
         private System.Windows.Forms.Timer MainLoopTimer = null;
         private System.Windows.Forms.Timer ItemsTradeAddTimer = null;
@@ -36,6 +37,8 @@ namespace Warehouse
         private Queue<WorldObject> PendingItemsToTradeAdd2 = new Queue<WorldObject>();
         private int[] GivingItems = null;
         private bool FirstInner = true;
+        private int? StackItem1;
+        private int? StackItem2;
 
         private void DoLoginStuff()
         {
@@ -113,6 +116,14 @@ namespace Warehouse
                 CramTimer.Tick += CramTimer_Tick;
                 CramTimer.Enabled = false;
                 CramTimer.Start();
+
+                StackTimer = new System.Windows.Forms.Timer
+                {
+                    Interval = 500
+                };
+                StackTimer.Tick += StackTimer_Tick;
+                StackTimer.Enabled = false;
+                StackTimer.Start();
 
                 ItemsTradeAddTimer = new System.Windows.Forms.Timer
                 {
@@ -192,9 +203,13 @@ namespace Warehouse
                     WantToSyncItems = true;
                 }
 
-                if (!CramTimer.Enabled)
+                if (!CramTimer.Enabled && !StackTimer.Enabled)
                 {
                     Cram();
+                }
+                if (!StackTimer.Enabled)
+                {
+                    Stack();
                 }
                 Jump();
                 SyncItems();
@@ -278,6 +293,39 @@ namespace Warehouse
         private void CramTimer_Tick(object sender, EventArgs e)
         {
             Cram();
+        }
+        private void Stack()
+        {
+            if (StackItem1.HasValue && StackItem2.HasValue)
+            {
+                Core.Actions.SelectItem(StackItem2.Value);
+                Core.Actions.MoveItem(StackItem2.Value, Core.CharacterFilter.Id, 0, true);
+                StackTimer.Enabled = false;
+                StackItem1 = null;
+                StackItem2 = null;
+                WantToSyncItems = true;
+                return;
+            }
+            else
+            {
+                List<WorldObject> allItems = Core.GetAllStackableItems();
+                IEnumerable<WorldObject> nonFull = allItems.Where(k => k.StackCount() != k.StackMax());
+                IEnumerable<IGrouping<string, WorldObject>> nonFullSiblingGroups = nonFull.GroupBy(k => k.Name).Where(k => k.Count() > 1);
+                foreach (IGrouping<string, WorldObject> nonFullSiblingGroup in nonFullSiblingGroups)
+                {
+                    StackItem1 = nonFullSiblingGroup.First().Id;
+                    StackItem2 = nonFullSiblingGroup.Skip(1).First().Id;
+                    Core.Actions.SelectItem(StackItem1.Value);
+                    Core.Actions.MoveItem(StackItem1.Value, Core.CharacterFilter.Id, 0, false);
+                    StackTimer.Enabled = true;
+                    return;
+                }
+                StackTimer.Enabled = false;
+            }
+        }
+        private void StackTimer_Tick(object sender, EventArgs e)
+        {
+            Stack();
         }
         private void AddPendingItemsToTrade()
         {

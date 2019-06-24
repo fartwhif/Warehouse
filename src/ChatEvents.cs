@@ -496,7 +496,7 @@ namespace Warehouse
         }
         private void Log(string what)
         {
-            WriteToChat("[warehouse] " + what);
+            WriteToChat("[Warehouse] " + what);
         }
     }
 }

@@ -79,6 +79,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BurdenStatus.cs" />
     <Compile Include="Character.cs" />
     <Compile Include="CharSelectCoordFinder.cs" />
     <Compile Include="charStats.cs" />

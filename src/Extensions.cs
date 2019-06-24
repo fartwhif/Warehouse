@@ -1,6 +1,5 @@
 ﻿using Decal.Adapter;
 using Decal.Adapter.Wrappers;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,6 +26,20 @@ namespace Warehouse
                         ItemId = item.Id,
                         ItemName = item.RealName()
                     });
+                }
+            }
+            return items;
+        }
+        public static List<WorldObject> GetAllStackableItems(this CoreManager cm)
+        {
+            List<WorldObject> targetContainers = new List<WorldObject>();
+            WorldObjectCollection myItems = cm.WorldFilter.GetByOwner(cm.CharacterFilter.Id);
+            List<WorldObject> items = new List<WorldObject>();
+            foreach (WorldObject item in myItems)
+            {
+                if (item.ObjectClass != ObjectClass.Container && item.ObjectClass != ObjectClass.Foci && !item.IsWielded() && !item.IsEquipped() && item.StackMax().HasValue)
+                {
+                    items.Add(item);
                 }
             }
             return items;
@@ -68,7 +81,8 @@ namespace Warehouse
                     {
                         Id = cont.Id,
                         TotalSlots = cont.Values(LongValueKey.ItemSlots),
-                        OccupiedSlots = cm.WorldFilter.GetByOwner(cont.Id).Count
+                        OccupiedSlots = cm.WorldFilter.GetByOwner(cont.Id).Count,
+                        WorldObject = cont
                     });
                 }
             }
@@ -92,6 +106,24 @@ namespace Warehouse
                 longVals[(LongValueKey)key] = wo.Values((LongValueKey)key);
             }
             return longVals;
+        }
+        public static Dictionary<StringValueKey, string> GetStringValues(this WorldObject wo)
+        {
+            Dictionary<StringValueKey, string> stringVals = new Dictionary<StringValueKey, string>();
+            foreach (int key in wo.StringKeys)
+            {
+                stringVals[(StringValueKey)key] = wo.Values((StringValueKey)key);
+            }
+            return stringVals;
+        }
+        public static Dictionary<DoubleValueKey, double> GetDoubleValues(this WorldObject wo)
+        {
+            Dictionary<DoubleValueKey, double> doubleVals = new Dictionary<DoubleValueKey, double>();
+            foreach (int key in wo.DoubleKeys)
+            {
+                doubleVals[(DoubleValueKey)key] = wo.Values((DoubleValueKey)key);
+            }
+            return doubleVals;
         }
         public static string GetSalvageMaterialName(WorldObject wo)
         {
@@ -136,6 +168,14 @@ namespace Warehouse
         {
             return LongValue(wo, LongValueKey.Value).Value;
         }
+        public static int? StackCount(this WorldObject wo)
+        {
+            return LongValue(wo, LongValueKey.StackCount);
+        }
+        public static int? StackMax(this WorldObject wo)
+        {
+            return LongValue(wo, LongValueKey.StackMax);
+        }
         public static bool Attuned(this WorldObject wo)
         {
             return LongValue(wo, LongValueKey.Attuned) > 0;
@@ -147,40 +187,6 @@ namespace Warehouse
                 return wo.Values(key);
             }
             return null;
-        }
-        public class BurdenStatus
-        {
-            public int FreeSlots => TotalSlots - OccupiedSlots;
-            public int TotalSlots { get; set; }
-            public int OccupiedSlots { get; set; }
-            public int CurrentBurdenPercentage { get; set; }
-            public int CurrentBurdenPercentageCorrected
-            {
-                get
-                {
-                    if (BurdenCapacity == 0)
-                    {
-                        return 0;
-                    }
-                    return (int)(Math.Round(100 * (CurrentBurden / (double)BurdenCapacity)));
-                }
-            }
-            public int CurrentBurden { get; set; }
-            public int BurdenCapacity
-            {
-                get
-                {
-                    if (CurrentBurdenPercentage == 0)
-                    {
-                        return 0;
-                    }
-                    return (int)Math.Round(CurrentBurden / (CurrentBurdenPercentage / (double)100)) * 3;
-                }
-            }
-            public override string ToString()
-            {
-                return $"Items: {OccupiedSlots} / {TotalSlots}  Burden: {CurrentBurden.ToString("N0")} / {BurdenCapacity.ToString("N0")} ( {CurrentBurdenPercentageCorrected}% )";
-            }
         }
         public static BurdenStatus GetBurdenStatus(this CoreManager cm)
         {
