@@ -29,6 +29,18 @@ namespace Warehouse
             };
             myPlayer.Play();
         }
+        private void SendKey(string key, bool press, bool release)
+        {
+            Mapper.KeyInfo ki = Mapper.GetScanCode(key);
+            if (press)
+            {
+                Input.SendKeyInput(ki.ScanCode, true, false);
+            }
+            if (release)
+            {
+                Input.SendKeyInput(ki.ScanCode, false, true);
+            }
+        }
         private void SendChatCommand(string cmd)
         {
             SendChatCommand(new string[] { cmd });

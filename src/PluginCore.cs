@@ -37,8 +37,8 @@ namespace Warehouse
         private Queue<WorldObject> PendingItemsToTradeAdd2 = new Queue<WorldObject>();
         private int[] GivingItems = null;
         private bool FirstInner = true;
-        private int? StackItem1;
-        private int? StackItem2;
+        private WorldObject StackItem1;
+        private WorldObject StackItem2;
 
         private void DoLoginStuff()
         {
@@ -211,7 +211,12 @@ namespace Warehouse
                 {
                     Stack();
                 }
-                Jump();
+                if (WantToJump)
+                {
+                    Core.Foreground();
+                    SendKey("o", true, true);
+                    WantToJump = false;
+                }
                 SyncItems();
             }
             else if (!loggedIn)
@@ -254,18 +259,6 @@ namespace Warehouse
             }
             TimeSinceScanFinished = Stopwatch.StartNew();
         }
-        private void Jump()
-        {
-            if (!WantToJump)
-            {
-                return;
-            }
-            WantToJump = false;
-            Core.Foreground();
-            Mapper.KeyInfo ki = Mapper.GetScanCode(" ");
-            Input.SendKeyInput(ki.ScanCode, true, false);
-            Input.SendKeyInput(ki.ScanCode, false, true);
-        }
         private void Cram()
         {
             List<Pack> sidePacks = Core.GetSidePacks();
@@ -296,10 +289,14 @@ namespace Warehouse
         }
         private void Stack()
         {
-            if (StackItem1.HasValue && StackItem2.HasValue)
+            if (StackItem1 != null && StackItem2 != null)
             {
-                Core.Actions.SelectItem(StackItem2.Value);
-                Core.Actions.MoveItem(StackItem2.Value, Core.CharacterFilter.Id, 0, true);
+                Core.Actions.SelectItem(StackItem2.Id);
+                if (StackItem1.StackCount() + StackItem2.StackCount() > StackItem1.StackMax())
+                {
+                    Core.Actions.SelectedStackCount = StackItem1.StackMax().Value - StackItem1.StackCount().Value;
+                }
+                Core.Actions.MoveItem(StackItem2.Id, Core.CharacterFilter.Id, 0, true);
                 StackTimer.Enabled = false;
                 StackItem1 = null;
                 StackItem2 = null;
@@ -313,10 +310,10 @@ namespace Warehouse
                 IEnumerable<IGrouping<string, WorldObject>> nonFullSiblingGroups = nonFull.GroupBy(k => k.Name).Where(k => k.Count() > 1);
                 foreach (IGrouping<string, WorldObject> nonFullSiblingGroup in nonFullSiblingGroups)
                 {
-                    StackItem1 = nonFullSiblingGroup.First().Id;
-                    StackItem2 = nonFullSiblingGroup.Skip(1).First().Id;
-                    Core.Actions.SelectItem(StackItem1.Value);
-                    Core.Actions.MoveItem(StackItem1.Value, Core.CharacterFilter.Id, 0, false);
+                    StackItem1 = nonFullSiblingGroup.First();
+                    StackItem2 = nonFullSiblingGroup.Skip(1).First();
+                    Core.Actions.SelectItem(StackItem1.Id);
+                    Core.Actions.MoveItem(StackItem1.Id, Core.CharacterFilter.Id, 0, false);
                     StackTimer.Enabled = true;
                     return;
                 }

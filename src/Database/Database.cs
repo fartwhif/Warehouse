@@ -43,7 +43,7 @@ namespace Warehouse
             //db = new SQLiteConnection("Data Source='" + DBFilePath + "';Version=3;");
             //db.Open();
         }
-        private Character DBSearchChars(string search)
+        private Character DBSearchChars(string charName)
         {
             string cmdStr = "select * from item WHERE char_name LIKE @Search";
             using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
@@ -51,12 +51,31 @@ namespace Warehouse
                 connection.Open();
                 using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
                 {
-                    search = search.Trim();
-                    command.Parameters.AddWithValue("@Search", search);
+                    charName = charName.Trim();
+                    command.Parameters.AddWithValue("@Search", charName);
                     SQLiteDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        Item item = DBReadRow(reader);
+                        Item item = DBReadItem(reader);
+                        return new Character(item.CharId, item.CharName, 0);
+                    }
+                }
+            }
+            return null;
+        }
+        private Character DBSearchChars(int charId)
+        {
+            string cmdStr = "select * from item WHERE char_id = @CharId";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    command.Parameters.AddWithValue("@CharId", charId);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        Item item = DBReadItem(reader);
                         return new Character(item.CharId, item.CharName, 0);
                     }
                 }
@@ -101,13 +120,13 @@ namespace Warehouse
                     List<Item> items = new List<Item>();
                     while (reader.Read())
                     {
-                        items.Add(DBReadRow(reader));
+                        items.Add(DBReadItem(reader));
                     }
                     return items;
                 }
             }
         }
-        private static Item DBReadRow(SQLiteDataReader reader)
+        private static Item DBReadItem(SQLiteDataReader reader)
         {
             return new Item()
             {
@@ -163,7 +182,7 @@ namespace Warehouse
                     List<Item> items = new List<Item>();
                     while (reader.Read())
                     {
-                        items.Add(DBReadRow(reader));
+                        items.Add(DBReadItem(reader));
                     }
                     return items;
                 }
@@ -182,7 +201,7 @@ namespace Warehouse
                     SQLiteDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        return DBReadRow(reader);
+                        return DBReadItem(reader);
                     }
                 }
             }
@@ -200,7 +219,7 @@ namespace Warehouse
                     SQLiteDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        return DBReadRow(reader);
+                        return DBReadItem(reader);
                     }
                 }
             }
@@ -250,22 +269,7 @@ namespace Warehouse
                 return lastID;
             }
         }
-        private class ConfigurationSetting
-        {
-            public int Id { get; set; }
-            public string Key { get; set; }
-            public string Value { get; set; }
-            public bool DBEquals(ConfigurationSetting obj)
-            {
-                return Id == obj.Id
-                    && Key == obj.Key
-                    && Value == obj.Value;
-            }
-            public override string ToString()
-            {
-                return $"Setting, {Key} = {Value}";
-            }
-        }
+
         private ConfigurationSetting DBGetSetting(string key)
         {
             string cmdStr = "select * from config WHERE setting_key = @SettingKey";
@@ -335,6 +339,125 @@ namespace Warehouse
                     command.Parameters.AddWithValue("@SettingValue", setting.Value);
                     int affectedRows = command.ExecuteNonQuery();
                     setting.Id = DBGetLastInsertedId(connection);
+                }
+            }
+        }
+
+        private static CharacterTag DBReadTag(SQLiteDataReader reader)
+        {
+            return new CharacterTag()
+            {
+                Id = Convert.ToInt32((long)reader["id"]),
+                CharacterId = Convert.ToInt32((long)reader["char_id"]),
+                Tag = (string)reader["tag"]
+            };
+        }
+        private List<CharacterTag> DBGetAllTags()
+        {
+            List<CharacterTag> tags = new List<CharacterTag>();
+            string cmdStr = "select * from tag";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        tags.Add(DBReadTag(reader));
+                    }
+                }
+            }
+            return tags;
+        }
+        private CharacterTag DBGetTag(string tag)
+        {
+            string cmdStr = "select * from tag WHERE tag LIKE @TagValue";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    tag = $"%{tag}%";
+                    command.Parameters.AddWithValue("@TagValue", tag);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        return DBReadTag(reader);
+                    }
+                }
+            }
+            return null;
+        }
+        private CharacterTag DBGetTag(int charId)
+        {
+            string cmdStr = "select * from tag WHERE char_id = @CharId";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    command.Parameters.AddWithValue("@CharId", charId);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        return new CharacterTag()
+                        {
+                            Id = Convert.ToInt32((long)reader["id"]),
+                            CharacterId = Convert.ToInt32((long)reader["char_id"]),
+                            Tag = (string)reader["tag"]
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+        private DBSyncAction DBSetTag(CharacterTag tag)
+        {
+            CharacterTag existant = DBGetTag(tag.CharacterId);
+            if (existant != null)
+            {
+                tag.Id = existant.Id;
+                if (tag.DBEquals(existant))
+                {
+                    return DBSyncAction.None;
+                }
+                DBUpdateTag(tag);
+                return DBSyncAction.Update;
+            }
+            else
+            {
+                DBInsertTag(tag);
+                return DBSyncAction.Insert;
+            }
+        }
+        private void DBUpdateTag(CharacterTag tag)
+        {
+            string cmdStr = "UPDATE tag SET tag = @TagValue, char_id = @CharId WHERE id = @Id";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    command.Parameters.AddWithValue("@Id", tag.Id);
+                    command.Parameters.AddWithValue("@CharId", tag.CharacterId);
+                    command.Parameters.AddWithValue("@TagValue", tag.Tag);
+                    int affectedRows = command.ExecuteNonQuery();
+                }
+            }
+        }
+        private void DBInsertTag(CharacterTag tag)
+        {
+            string cmdStr = "INSERT INTO tag (char_id, tag) VALUES (@CharId, @TagValue)";
+            using (SQLiteConnection connection = new SQLiteConnection(ConnectionString))
+            {
+                connection.Open();
+                using (SQLiteCommand command = new SQLiteCommand(cmdStr, connection))
+                {
+                    command.Parameters.AddWithValue("@CharId", tag.CharacterId);
+                    command.Parameters.AddWithValue("@TagValue", tag.Tag);
+                    int affectedRows = command.ExecuteNonQuery();
+                    tag.Id = DBGetLastInsertedId(connection);
                 }
             }
         }

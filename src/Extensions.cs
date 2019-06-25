@@ -168,6 +168,16 @@ namespace Warehouse
         {
             return LongValue(wo, LongValueKey.Value).Value;
         }
+        public static int? StackFree(this WorldObject wo)
+        {
+            int? sc = StackCount(wo);
+            int? sm = StackMax(wo);
+            if (!sc.HasValue || !sm.HasValue)
+            {
+                return null;
+            }
+            return (int?)sm.Value - sc.Value;
+        }
         public static int? StackCount(this WorldObject wo)
         {
             return LongValue(wo, LongValueKey.StackCount);

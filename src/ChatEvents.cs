@@ -119,12 +119,12 @@ namespace Warehouse
         }
         private void HandleChatMessage(ChatMessage chatMessage)
         {
-            if (chatMessage.Verb == "tells you" && TradePartnerId == chatMessage.ChatterId)
+            if (chatMessage.IsTell && TradePartnerId == chatMessage.ChatterId)
             {
                 HandleTradePartnerCommandText(chatMessage);
                 return;
             }
-            else if (string.IsNullOrEmpty(chatMessage.Channel) && chatMessage.Verb == "says")
+            else if (string.IsNullOrEmpty(chatMessage.Channel) && chatMessage.IsOpen)
             {
                 HandleProximityChatMessage(chatMessage);
             }
@@ -135,7 +135,8 @@ namespace Warehouse
             {
                 if (AllowJumpCommand)
                 {
-                    Jump();
+                    WantToJump = true;
+                    return;
                 }
                 else
                 {
@@ -143,9 +144,9 @@ namespace Warehouse
                     return;
                 }
             }
-            else if (chatMessage.Message.ToLower() == "tog")
+            else if (chatMessage.Message.ToLower().StartsWith("tags"))
             {
-                //PauseBreakToggle();
+                Tags(chatMessage);
             }
             else if (chatMessage.Message.ToLower().StartsWith("search"))
             {
@@ -160,6 +161,41 @@ namespace Warehouse
                 SwitchCharacter(chatMessage);
             }
         }
+        private void Tags(ChatMessage chatMessage)
+        {
+            List<CharacterTag> tags = DBGetAllTags();
+            if (tags.Any())
+            {
+                SendChatCommand($"/t {chatMessage.ChatterName}, {tags.Count} tagged characters:");
+                foreach (CharacterTag tag in tags)
+                {
+                    SendChatCommand($"/t {chatMessage.ChatterName}, {DBSearchChars(tag.CharacterId)?.Name ?? tag.CharacterId.ToString()} ( {tag.Tag} )");
+                }
+            }
+            else
+            {
+                SendChatCommand($"/t {chatMessage.ChatterName}, No tagged characters yet!");
+                SendChatCommand($"/t {chatMessage.ChatterName}, To tag me 'misc', open a trade with me and type /r tag misc");
+                SendChatCommand($"/t {chatMessage.ChatterName}, Then, when using search, retrieve, and switch commands reference me with my tag, misc");
+                SendChatCommand($"/t {chatMessage.ChatterName}, Don't give the same tag to multiple mules, or you will have a bad time.");
+            }
+        }
+        private void Tag(ChatMessage chatMessage)
+        {
+            string parameters = chatMessage.Message.Trim().Substring(3).Trim();
+            CharacterTag existing = DBGetTag(Core.CharacterFilter.Id);
+            DBSyncAction actionTaken = DBSetTag(new CharacterTag() { CharacterId = Core.CharacterFilter.Id, Tag = parameters });
+            switch (actionTaken)
+            {
+                case DBSyncAction.Insert:
+                    SendChatCommand($"/t {chatMessage.ChatterName}, my tag is now: ( {parameters} )");
+                    break;
+                case DBSyncAction.Update:
+                    SendChatCommand($"/t {chatMessage.ChatterName}, changed my tag:");
+                    SendChatCommand($"/t {chatMessage.ChatterName}, from ( {existing.Tag} ) to ( {parameters} )");
+                    break;
+            }
+        }
         private void Search(ChatMessage chatMessage)
         {
             string parameters = chatMessage.Message.Trim().Substring(6).Trim();
@@ -169,6 +205,7 @@ namespace Warehouse
         public void Tell(List<Item> items, string who)
         {
             List<string> lines = new List<string>();
+            List<CharacterTag> tags = DBGetAllTags();
             if (items.Count < 1)
             {
                 lines.Add($"/t {who}, no items found");
@@ -178,7 +215,9 @@ namespace Warehouse
                 lines.Add($"/t {who}, {items.Count} items:");
                 foreach (Item item in items)
                 {
-                    lines.Add($"/t {who}, {item.CharName}, {item.ItemName}");
+                    CharacterTag tag = tags.First(k => k.CharacterId == item.CharId);
+                    string tagTxt = (tag == null) ? "" : $" ( {tag.Tag} )";
+                    lines.Add($"/t {who}, {item.CharName}{tagTxt}, {item.ItemName}");
                 }
             }
             SendChatCommand(lines.ToArray());
@@ -189,16 +228,25 @@ namespace Warehouse
             DBSearchItemsBy searchBy = DBSearchItemsBy.Substring;
             if (parameters.Contains(","))
             {
-                string searchForChar = parameters.Substring(0, parameters.IndexOf(",")).Trim();
-                if (string.IsNullOrEmpty(searchForChar))
+                string searchForCharOrTag = parameters.Substring(0, parameters.IndexOf(",")).Trim();
+                if (string.IsNullOrEmpty(searchForCharOrTag))
                 {
-                    SendChatCommand($"/t {chatterName}, incorrect char specific retrieval, use: /t {Core.CharacterFilter.Name}, retrieve charname,itemname");
+                    SendChatCommand($"/t {chatterName}, incorrect char specific retrieval, use: /t {Core.CharacterFilter.Name}, retrieve <char name or tag>,itemname");
+                    SendChatCommand($"/t {chatterName}, example: /t {Core.CharacterFilter.Name}, retrieve misc, argenory");
                     return null;
                 }
-                searchCharacter = DBSearchChars(searchForChar);
+                searchCharacter = DBSearchChars(searchForCharOrTag);
                 if (searchCharacter == null)
                 {
-                    SendChatCommand($"/t {chatterName}, char specific retrieval failed: did not find character: {searchForChar}");
+                    CharacterTag tag = DBGetTag(searchForCharOrTag);
+                    if (tag != null)
+                    {
+                        searchCharacter = DBSearchChars(tag.CharacterId);
+                    }
+                }
+                if (searchCharacter == null)
+                {
+                    SendChatCommand($"/t {chatterName}, char specific retrieval failed: did not find character by name or tag: {searchForCharOrTag}");
                     return null;
                 }
                 parameters = parameters.Substring(parameters.IndexOf(",") + 1).Trim();
@@ -282,7 +330,7 @@ namespace Warehouse
         {
             string command = "";
             string predicate = "";
-            Match match = Regex.Match(chatMessage.Message, "^(switch|search|retrieve|help|add|xadd|show|clear)(.*)", RegexOptions.IgnoreCase);
+            Match match = Regex.Match(chatMessage.Message, "^(switch|search|retrieve|tag|tags|help|add|xadd|show|clear)(.*)", RegexOptions.IgnoreCase);
             if (!match.Success)
             {
                 SayHelp();
@@ -292,6 +340,12 @@ namespace Warehouse
             predicate = match.Groups[2].Value;
             switch (command.ToLower())
             {
+                case "tag":
+                    Tag(chatMessage);
+                    break;
+                case "tags":
+                    Tags(chatMessage);
+                    break;
                 case "search":
                     Search(chatMessage);
                     break;
@@ -304,7 +358,7 @@ namespace Warehouse
                 case "jump":
                     if (AllowJumpCommand)
                     {
-                        Jump();
+                        WantToJump = true;
                     }
                     else
                     {
@@ -322,17 +376,27 @@ namespace Warehouse
         {
             string switchToCharName = chatMessage.Message.Substring(6).Trim();
             Character switchTargetFound = WarehouseFilterGlobals.Characters.FirstOrDefault(k => k.Name.ToLower() == switchToCharName.ToLower());
+            CharacterTag charTag = null;
+
             if (switchTargetFound == null)
             {
-                SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {switchToCharName} right now because that character is not in this account.");
-                SendChatCommand($"Sorry, I can't switch to {switchToCharName} right now because that character is not in this account.");
+                charTag = DBGetTag(switchToCharName);
+                if (charTag != null)
+                {
+                    switchTargetFound = WarehouseFilterGlobals.Characters.FirstOrDefault(k => k.Id == charTag.CharacterId);
+                }
+            }
+            string charTagTxt = (charTag == null) ? "" : $" ( {charTag.Tag} )";
+            if (switchTargetFound == null)
+            {
+                SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {switchToCharName} right now because that character name or tag is not in this account.");
+                SendChatCommand($"Sorry, I can't switch to {switchToCharName} right now because that character name or tag is not in this account.");
                 return;
             }
-
             if (TradePartnerId != 0 && TradePartnerId != chatMessage.ChatterId)
             {
-                SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {switchTargetFound.Name} right now because I'm in the middle of trading.");
-                SendChatCommand($"Sorry, I can't switch to {switchTargetFound.Name} right now because I'm in the middle of trading.");
+                SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {switchTargetFound.Name}{charTagTxt} right now because I'm in the middle of trading.");
+                SendChatCommand($"Sorry, I can't switch to {switchTargetFound.Name}{charTagTxt} right now because I'm in the middle of trading.");
                 return;
             }
 
@@ -343,8 +407,8 @@ namespace Warehouse
                 return;
             }
 
-            SendChatCommand($"/t {chatMessage.ChatterName}, switching to {switchTargetFound.Name}.");
-            SendChatCommand($"switching to {switchTargetFound.Name}");
+            SendChatCommand($"/t {chatMessage.ChatterName}, switching to {switchTargetFound.Name}{charTagTxt}");
+            SendChatCommand($"switching to {switchTargetFound.Name}{charTagTxt}");
 
             CharToLogin = switchTargetFound.Id;
             Core.Actions.Logout();
@@ -444,8 +508,8 @@ namespace Warehouse
         {
             get
             {
-                Version ver2 = Assembly.GetAssembly(typeof(PluginCore)).GetName().Version;
-                return $"{ver2.Major}.{ver2.Minor}";
+                Version ver = Assembly.GetAssembly(typeof(PluginCore)).GetName().Version;
+                return $"v{ver.Major}.{ver.Minor}.{ver.Build}";
             }
         }
         private void SayHelp(bool meta = true, bool bannerOnly = false)
@@ -457,16 +521,16 @@ namespace Warehouse
             }
             if (bannerOnly)
             {
-                SendChatCommand(new string[] { !meta ? $"/t {TradePartnerName}, Hello. Commands: [ help, add, xadd, show, clear, search, retrieve, switch ] warehouse v{ver}" : "" });
+                SendChatCommand(new string[] { !meta ? $"/t {TradePartnerName}, Hello. Commands: (switch|search|retrieve|tag|tags|help|add|xadd|show|clear) warehouse {ver}" : "" });
                 SendChatCommand(new string[] { !meta ? $"/t {TradePartnerName}, {Core.GetBurdenStatus().ToString()}" : "" });
 
                 return;
             }
 
             string[] help = new string[] {
-                !meta ? $"/r Hello. I can mule for you.  Open up a trade window!  warehouse v{ver}" : "",
+                !meta ? $"/r Hello. I can mule for you.  Open up a trade window!  warehouse {ver}" : "",
                 meta ? $"/r sorry, I don't understand that command." : "",
-                $"/r Commands: [ help, add, xadd, show, clear, search, retrieve, switch ]",
+                $"/r Commands: (switch|search|retrieve|tag|tags|help|add|xadd|show|clear)",
                 $"/r search for diamond powders across all characters: /t {Core.CharacterFilter.Name}, search diamond powder",
                 $"/r retrieve item(s) either on this character or on another.  Switches characters if needed.",
                 $"/r from a specific character: /t {Core.CharacterFilter.Name}, retrieve MuleMan I, quiddity ingot",
