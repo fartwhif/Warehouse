@@ -3,7 +3,7 @@
 !define APPNAME "Warehouse"
 !define NFNAME "WarehouseFilter"
 !define SOFTWARECOMPANY "FartwhifDecalPlugins"
-!define VERSION	"0.3.2"
+!define VERSION	"0.4.0"
 !define APPGUID "{DA4BFDDC-C110-45CE-8D08-4BD45C34CC2C}"
 
 !define ASSEMBLY "Warehouse.dll"
@@ -58,6 +58,13 @@ Section "" CoreSection
 	File "${BUILDPATH}\System.Data.SQLite.dll"
 	File "${BUILDPATH}\System.Data.SQLite.dll.config"
 	File "${BUILDPATH}\warehouse.default.db"
+	File "${BUILDPATH}\ACWatchDog.Interop.dll"
+	File "${BUILDPATH}\CSharpTest.Net.RpcLibrary.dll"
+	File "${BUILDPATH}\Newtonsoft.Json.dll"
+	File "${BUILDPATH}\ProcCmdLine32.dll"
+	File "${BUILDPATH}\ProcCmdLine64.dll"
+	File "${BUILDPATH}\ACWatchDog.exe"
+	
 
 	SetOutPath "$INSTDIR\x86"
 	File "${BUILDPATH}\x86\SQLite.Interop.dll"
@@ -119,6 +126,12 @@ Section Uninstall
 	Delete "$INSTDIR\System.Data.SQLite.dll.config"
 	Delete "$INSTDIR\warehouse.default.db"
 	Delete "$INSTDIR\x86\SQLite.Interop.dll"
+	Delete "$INSTDIR\ACWatchDog.Interop.dll"
+	Delete "$INSTDIR\CSharpTest.Net.RpcLibrary.dll"
+	Delete "$INSTDIR\Newtonsoft.Json.dll"
+	Delete "$INSTDIR\ProcCmdLine32.dll"
+	Delete "$INSTDIR\ProcCmdLine64.dll"
+	Delete "$INSTDIR\ACWatchDog.exe"
 	RMDir "$INSTDIR\x86"
 	RMDir "$INSTDIR\"
 

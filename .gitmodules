@@ -1,0 +1,3 @@
+[submodule "dep/ACWatchDog"]
+	path = dep/ACWatchDog
+	url = https://github.com/fartwhif/ACWatchDog

@@ -10,7 +10,7 @@ using System.Diagnostics;
 
 namespace Warehouse
 {
-    [View("warehouse.ViewXML.mainView.xml")]
+    [View("Warehouse.ViewXML.mainView.xml")]
     [WireUpControlEvents]
     public partial class PluginCore
     {

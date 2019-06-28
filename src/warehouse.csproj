@@ -52,6 +52,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ACWatchDog.Interop">
+      <HintPath>..\dep\ACWatchDog\ACWatchDog.Interop\bin\Release\ACWatchDog.Interop.dll</HintPath>
+    </Reference>
     <Reference Include="Decal.Adapter, Version=2.9.5.0, Culture=neutral, PublicKeyToken=bd1c8ce002ce221e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Program Files (x86)\Decal 3.0\Decal.Adapter.dll</HintPath>
@@ -117,6 +120,15 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="ACWatchDog.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProcCmdLine32.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProcCmdLine64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="x64\SQLite.Interop.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -168,8 +180,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PreBuildEvent>
-    </PreBuildEvent>
+    <PreBuildEvent>copy /Y "$(SolutionDir)..\dep\ACWatchDog\ACWatchDog\bin\Release\ACWatchDog.exe" "$(SolutionDir)"</PreBuildEvent>
     <PostBuildEvent>mkdir C:\Games\warehouse
 Robocopy /S $(TargetDir) "C:\Games\Decal Plugins\Warehouse"
 mkdir "C:\vboxshared\warehouse\"
