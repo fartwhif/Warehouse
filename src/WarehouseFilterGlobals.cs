@@ -8,7 +8,9 @@ namespace Warehouse
         public static WarehouseFilterGlobals Instance => Nested.instance;
         public static int CharacterSlots { get => Nested.instance.characterSlots; set => Nested.instance.characterSlots = value; }
         public static List<Character> Characters { get => Nested.instance.characters; set => Nested.instance.characters = value; }
+        public static bool PluginCoreStarted { get { return Nested.instance.pluginCoreStarted; } set { Nested.instance.pluginCoreStarted = value; } }
         private int characterSlots;
+        private bool pluginCoreStarted = false;
         private List<Character> characters = new List<Character>();
         private class Nested
         {

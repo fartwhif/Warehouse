@@ -1,3 +1,4 @@
+using ACWatchDog.Interop;
 using Decal.Adapter;
 using Decal.Adapter.Wrappers;
 using System;
@@ -39,16 +40,11 @@ namespace Warehouse
         private bool FirstInner = true;
         private WorldObject StackItem1;
         private WorldObject StackItem2;
-        private Stopwatch TimeSinceWatchDogBark = Stopwatch.StartNew();
+        private Stopwatch TimeSinceWatchDogBark = null;
         private bool WatchDogRegistered = false;
 
         private void DoLoginStuff()
         {
-            if (CharToLogin == null)
-            {
-                //auto login
-                CharToLogin = WarehouseFilterGlobals.Characters[0].Id;
-            }
             if (LoginPhase == 0)
             {
                 if (CharToLogin.HasValue && !LoginAttempted && TimeSinceLogoff != null && TimeSinceLogoff.ElapsedMilliseconds > 10000)
@@ -103,6 +99,7 @@ namespace Warehouse
         }
         protected override void Startup()
         {
+            WarehouseFilterGlobals.PluginCoreStarted = true;
             try
             {
                 InitCharStats();
@@ -166,12 +163,10 @@ namespace Warehouse
         {
             if (loggedIn && TimeSinceLoginStarted != null && TimeSinceLoginStarted.Elapsed.TotalSeconds > 13)
             {
-                if (TimeSinceWatchDogBark.Elapsed.TotalSeconds > 30)
+                if ((TimeSinceWatchDogBark?.Elapsed.TotalSeconds ?? int.MaxValue) > 5)
                 {
                     TimeSinceWatchDogBark = Stopwatch.StartNew();
-                    ACWatchDog.Interop.AppMessage bark = ACWatchDog.Interop.AppMessage.New();
-                    bark.DelinquencyTime = 300; // 5 minutes;
-                    ACWatchDog.Interop.AppMessage resp = ACWatchDog.Interop.Client.Send(bark);
+                    AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
                     if (!WatchDogRegistered && resp != null)
                     {
                         WatchDogRegistered = true;
