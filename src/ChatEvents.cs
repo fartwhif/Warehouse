@@ -117,6 +117,7 @@ namespace Warehouse
                 match = Regex.Match(chatMessage.Message, "^(switch|search|retrieve|tag|tags|help|add|xadd|show|clear)(.*)", RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
+                    chatMessage.ParseSuccess = true;
                     chatMessage.ParsedCommand = match.Groups[1].Value.Trim();
                     chatMessage.ParsedParameters = match.Groups[2].Value.Trim();
                 }
@@ -125,13 +126,13 @@ namespace Warehouse
         }
         private void HandleChatMessage(ChatMessage chatMessage)
         {
-            if (!chatMessage.ParseSuccess && chatMessage.IsTell)
-            {
-                SayHelp(chatMessage.ChatterName, true, false);
-            }
-            else if (chatMessage.Message.ToLower().StartsWith("help"))
+            if (chatMessage.Message.ToLower().StartsWith("help"))
             {
                 SayHelp(chatMessage.ChatterName, false, false);
+            }
+            else if (!chatMessage.ParseSuccess && chatMessage.IsTell)
+            {
+                SayHelp(chatMessage.ChatterName, true, false);
             }
             else if (chatMessage.Message.ToLower() == "jump")
             {
@@ -222,14 +223,14 @@ namespace Warehouse
             else
             {
                 lines.Add($"/t {who}, {items.Count} items:");
-                foreach(var charGrp in items.GroupBy(k => k.CharId))
+                foreach (IGrouping<int, Item> charGrp in items.GroupBy(k => k.CharId))
                 {
-                    foreach (var itemGrp in charGrp.GroupBy(k => k.ItemName))
+                    foreach (IGrouping<string, Item> itemGrp in charGrp.GroupBy(k => k.ItemName))
                     {
-                        var item = itemGrp.First();
-                        var cnt = itemGrp.Count();
-                        var multi = cnt > 1;
-                        var strTally = multi ? $" x{cnt}" : "";
+                        Item item = itemGrp.First();
+                        int cnt = itemGrp.Count();
+                        bool multi = cnt > 1;
+                        string strTally = multi ? $" x{cnt}" : "";
 
                         CharacterTag tag = tags.FirstOrDefault(k => k.CharacterId == item.CharId);
                         string tagTxt = (tag == null) ? "" : $" ( {tag.Tag} )";
@@ -300,7 +301,7 @@ namespace Warehouse
             else
             {
                 Item firstItem = items.First();
-                if (TradePartnerId!=0 &&!chatMessage.IsEither(TradePartnerId, TradePartnerName))
+                if (TradePartnerId != 0 && !chatMessage.IsEither(TradePartnerId, TradePartnerName))
                 {
                     SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s) right now because I'm in the middle of trading.");
                     SendChatCommand($"Sorry, I can't switch to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s) right now because I'm in the middle of trading.");
@@ -324,14 +325,19 @@ namespace Warehouse
         }
         private void TradeGiveItem(int recipientId, string recipientName, int[] itemIds)
         {
-            WorldObject player = Core.GetPlayerById(recipientId);
+            WorldObject player = Core.GetPlayerByIdOrName(recipientId, recipientName);
             if (player == null)
             {
                 SendChatCommand($"/t {recipientName}, You are too far away to open a trade window. Please move closer and try the retrieve command again.");
                 return;
             }
-            double dist = GetMyDistanceTo(player.Coordinates());
-            if (dist > 0.00454)
+            if (recipientId == 0)
+            {
+                recipientId = player.Id;
+            }
+            double dist = Core.WorldFilter.Distance(recipientId, Core.CharacterFilter.Id, true);
+            //double dist = GetMyDistanceTo(player.Coordinates());//broken
+            if (dist > .005)
             {
                 SendChatCommand($"/t {recipientName}, You are too far away to open a trade window. Please move closer and try the retrieve command again.");
                 return;
@@ -468,6 +474,8 @@ namespace Warehouse
                     AddPendingItemsToTrade();
                     break;
                 case "clear":
+                    PendingItemsToTradeAdd2.Clear();
+                    PendingItemsToTradeAdd.Clear();
                     Host.Actions.TradeReset();
                     break;
             }

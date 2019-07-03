@@ -7,10 +7,26 @@ namespace Warehouse
 {
     internal static class Extensions
     {
-        public static WorldObject GetPlayerById(this CoreManager cm, int id)
+        public static WorldObject GetPlayerByIdOrName(this CoreManager cm, int id, string name)
         {
             WorldObjectCollection players = cm.WorldFilter.GetByObjectClass(ObjectClass.Player);
-            return players.FirstOrDefault(k => k.Id == id);
+            if (id != 0)
+            {
+                WorldObject plr = players.FirstOrDefault(k => k.Id == id);
+                if (plr != null)
+                {
+                    return plr;
+                }
+            }
+            if (!string.IsNullOrEmpty(name))
+            {
+                WorldObject plr = players.FirstOrDefault(k => k.Name == name);
+                if (plr != null)
+                {
+                    return plr;
+                }
+            }
+            return null;
         }
         public static List<Item> GetAllMyItems(this CoreManager cm)
         {
