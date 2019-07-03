@@ -103,7 +103,7 @@ namespace Warehouse
         }
         private void InboundChat(object sender, ChatTextInterceptEventArgs e)
         {
-            Match match = Regex.Match(e.Text, "^(\\[.+\\] |)\\<Tell\\:IIDString\\:([0-9]+)\\:([^\\>]*)\\>[^\\<]*\\<\\\\Tell\\> (.+), \\\"([^\\n]*)\\\"\\n$");
+            Match match = Regex.Match(e.Text, @"^(\[.+\] |)\<Tell\:IIDString\:([0-9]+)\:([^\>]*)\>[^\<]*\<\\Tell\> ([^,]+), \""([^\n]*)\""\n*$");
             if (match.Success)
             {
                 ChatMessage chatMessage = new ChatMessage()
@@ -114,39 +114,43 @@ namespace Warehouse
                     Verb = match.Groups[4].Value.Trim(),
                     Message = match.Groups[5].Value.Trim()
                 };
+                match = Regex.Match(chatMessage.Message, "^(switch|search|retrieve|tag|tags|help|add|xadd|show|clear)(.*)", RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    chatMessage.ParsedCommand = match.Groups[1].Value.Trim();
+                    chatMessage.ParsedParameters = match.Groups[2].Value.Trim();
+                }
                 HandleChatMessage(chatMessage);
             }
         }
         private void HandleChatMessage(ChatMessage chatMessage)
         {
-            if (chatMessage.IsTell && TradePartnerId == chatMessage.ChatterId)
+            if (!chatMessage.ParseSuccess && chatMessage.IsTell)
             {
-                HandleTradePartnerCommandText(chatMessage);
-                return;
+                SayHelp(chatMessage.ChatterName, true, false);
             }
-            else if (string.IsNullOrEmpty(chatMessage.Channel) && chatMessage.IsOpen)
+            else if (chatMessage.Message.ToLower().StartsWith("help"))
             {
-                HandleProximityChatMessage(chatMessage);
+                SayHelp(chatMessage.ChatterName, false, false);
             }
-        }
-        private void HandleProximityChatMessage(ChatMessage chatMessage)
-        {
-            if (chatMessage.Message.ToLower() == "jump")
+            else if (chatMessage.Message.ToLower() == "jump")
             {
                 if (AllowJumpCommand)
                 {
                     WantToJump = true;
-                    return;
                 }
                 else
                 {
                     SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, jump command is disabled.");
-                    return;
                 }
             }
             else if (chatMessage.Message.ToLower().StartsWith("tags"))
             {
                 Tags(chatMessage);
+            }
+            else if (chatMessage.Message.ToLower().StartsWith("tag"))
+            {
+                Tag(chatMessage);
             }
             else if (chatMessage.Message.ToLower().StartsWith("search"))
             {
@@ -159,6 +163,11 @@ namespace Warehouse
             else if (chatMessage.Message.ToLower().StartsWith("switch"))
             {
                 SwitchCharacter(chatMessage);
+            }
+            else if (chatMessage.IsEither(TradePartnerId, TradePartnerName))
+            {
+                HandleTradeCommand(chatMessage);
+                return;
             }
         }
         private void Tags(ChatMessage chatMessage)
@@ -213,11 +222,19 @@ namespace Warehouse
             else
             {
                 lines.Add($"/t {who}, {items.Count} items:");
-                foreach (Item item in items)
+                foreach(var charGrp in items.GroupBy(k => k.CharId))
                 {
-                    CharacterTag tag = tags.First(k => k.CharacterId == item.CharId);
-                    string tagTxt = (tag == null) ? "" : $" ( {tag.Tag} )";
-                    lines.Add($"/t {who}, {item.CharName}{tagTxt}, {item.ItemName}");
+                    foreach (var itemGrp in charGrp.GroupBy(k => k.ItemName))
+                    {
+                        var item = itemGrp.First();
+                        var cnt = itemGrp.Count();
+                        var multi = cnt > 1;
+                        var strTally = multi ? $" x{cnt}" : "";
+
+                        CharacterTag tag = tags.FirstOrDefault(k => k.CharacterId == item.CharId);
+                        string tagTxt = (tag == null) ? "" : $" ( {tag.Tag} )";
+                        lines.Add($"/t {who}, {item.CharName}{tagTxt}, {item.ItemName}{strTally}");
+                    }
                 }
             }
             SendChatCommand(lines.ToArray());
@@ -283,7 +300,7 @@ namespace Warehouse
             else
             {
                 Item firstItem = items.First();
-                if (TradePartnerId != 0 && TradePartnerId != chatMessage.ChatterId)
+                if (TradePartnerId!=0 &&!chatMessage.IsEither(TradePartnerId, TradePartnerName))
                 {
                     SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s) right now because I'm in the middle of trading.");
                     SendChatCommand($"Sorry, I can't switch to {firstItem.CharName} to retrieve {PendingTradeGiveItems.Count} item(s) right now because I'm in the middle of trading.");
@@ -326,52 +343,6 @@ namespace Warehouse
             Input.SendKeyInput(ki.ScanCode, true, false);
             Input.SendKeyInput(ki.ScanCode, false, true);
         }
-        private void HandleTradePartnerCommandText(ChatMessage chatMessage)
-        {
-            string command = "";
-            string predicate = "";
-            Match match = Regex.Match(chatMessage.Message, "^(switch|search|retrieve|tag|tags|help|add|xadd|show|clear)(.*)", RegexOptions.IgnoreCase);
-            if (!match.Success)
-            {
-                SayHelp();
-                return;
-            }
-            command = match.Groups[1].Value;
-            predicate = match.Groups[2].Value;
-            switch (command.ToLower())
-            {
-                case "tag":
-                    Tag(chatMessage);
-                    break;
-                case "tags":
-                    Tags(chatMessage);
-                    break;
-                case "search":
-                    Search(chatMessage);
-                    break;
-                case "retrieve":
-                    Retrieve(chatMessage);
-                    break;
-                case "switch":
-                    SwitchCharacter(chatMessage);
-                    break;
-                case "jump":
-                    if (AllowJumpCommand)
-                    {
-                        WantToJump = true;
-                    }
-                    else
-                    {
-                        SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, jump command is disabled.");
-                        return;
-                    }
-                    break;
-                default:
-                    HandleTradeCommand(command.Trim(), predicate.Trim(), chatMessage);
-                    break;
-            }
-
-        }
         private void SwitchCharacter(ChatMessage chatMessage)
         {
             string switchToCharName = chatMessage.Message.Substring(6).Trim();
@@ -393,7 +364,7 @@ namespace Warehouse
                 SendChatCommand($"Sorry, I can't switch to {switchToCharName} right now because that character name or tag is not in this account.");
                 return;
             }
-            if (TradePartnerId != 0 && TradePartnerId != chatMessage.ChatterId)
+            if (TradePartnerId != 0 && !chatMessage.IsEither(TradePartnerId, TradePartnerName))
             {
                 SendChatCommand($"/t {chatMessage.ChatterName}, Sorry, I can't switch to {switchTargetFound.Name}{charTagTxt} right now because I'm in the middle of trading.");
                 SendChatCommand($"Sorry, I can't switch to {switchTargetFound.Name}{charTagTxt} right now because I'm in the middle of trading.");
@@ -413,13 +384,14 @@ namespace Warehouse
             CharToLogin = switchTargetFound.Id;
             Core.Actions.Logout();
         }
-        private void HandleTradeCommand(string command, string predicate, ChatMessage chatMessage)
+        private void HandleTradeCommand(ChatMessage chatMessage)
         {
             bool show = false;
             bool regex = false;
             bool number = false;
             int numberParsed = -1;
-            if (command.ToLower() == "show")
+            string command = chatMessage.ParsedCommand;
+            if (chatMessage.ParsedCommand.ToLower() == "show")
             {
                 command = "add";
                 show = true;
@@ -431,10 +403,10 @@ namespace Warehouse
             }
             if (!show)
             {
-                Match match = Regex.Match(predicate, "^-?\\d+$", RegexOptions.IgnoreCase);
+                Match match = Regex.Match(chatMessage.ParsedParameters, "^-?\\d+$", RegexOptions.IgnoreCase);
                 if (match.Success)
                 {
-                    if (int.TryParse(predicate, out numberParsed))
+                    if (int.TryParse(chatMessage.ParsedParameters, out numberParsed))
                     {
                         number = true;
                     }
@@ -472,7 +444,7 @@ namespace Warehouse
                         }
                         else if (regex)
                         {
-                            Match match = Regex.Match(itemName, predicate, RegexOptions.IgnoreCase);
+                            Match match = Regex.Match(itemName, chatMessage.ParsedParameters, RegexOptions.IgnoreCase);
                             if (match.Success)
                             {
                                 if (wo.ObjectClass != ObjectClass.Container)
@@ -481,7 +453,7 @@ namespace Warehouse
                                 }
                             }
                         }
-                        else if (itemName.ToLower().Contains(predicate.ToLower()))
+                        else if (itemName.ToLower().Contains(chatMessage.ParsedParameters.ToLower()))
                         {
                             if (wo.ObjectClass != ObjectClass.Container)
                             {
@@ -498,10 +470,6 @@ namespace Warehouse
                 case "clear":
                     Host.Actions.TradeReset();
                     break;
-                case "help":
-                    SayHelp(false);
-                    break;
-
             }
         }
         private string VersionString
@@ -512,35 +480,34 @@ namespace Warehouse
                 return $"v{ver.Major}.{ver.Minor}.{ver.Build}";
             }
         }
-        private void SayHelp(bool meta = true, bool bannerOnly = false)
+        private void SayHelp(string toWho, bool SayWotM8 = true, bool bannerOnly = false)
         {
-            string ver = "";
-            if (!meta)
-            {
-                ver = VersionString;
-            }
+            string commands = $"Commands: (switch|search|retrieve|tag|tags|help|add|xadd|show|clear) warehouse {VersionString}";
             if (bannerOnly)
             {
-                SendChatCommand(new string[] { !meta ? $"/t {TradePartnerName}, Hello. Commands: (switch|search|retrieve|tag|tags|help|add|xadd|show|clear) warehouse {ver}" : "" });
-                SendChatCommand(new string[] { !meta ? $"/t {TradePartnerName}, {Core.GetBurdenStatus().ToString()}" : "" });
-
+                SendChatCommand(new string[] { !SayWotM8 ? $"/t {toWho}, Hello. {commands}" : "" });
+                SendChatCommand(new string[] { !SayWotM8 ? $"/t {toWho}, {Core.GetBurdenStatus().ToString()}" : "" });
                 return;
             }
-
-            string[] help = new string[] {
-                !meta ? $"/r Hello. I can mule for you.  Open up a trade window!  warehouse {ver}" : "",
-                meta ? $"/r sorry, I don't understand that command." : "",
-                $"/r Commands: (switch|search|retrieve|tag|tags|help|add|xadd|show|clear)",
-                $"/r search for diamond powders across all characters: /t {Core.CharacterFilter.Name}, search diamond powder",
-                $"/r retrieve item(s) either on this character or on another.  Switches characters if needed.",
-                $"/r from a specific character: /t {Core.CharacterFilter.Name}, retrieve MuleMan I, quiddity ingot",
-                $"/r switch to another character in the account: /t {Core.CharacterFilter.Name}, switch MuleMan II",
-                $"/r quills: /t {Core.CharacterFilter.Name}, add quill",
-                $"/r all types of salvage bags: /t {Core.CharacterFilter.Name}, add salvage",
-                $"/r all types of complete salvage bags: /t {Core.CharacterFilter.Name}, add salvage (100)",
-                $"/r complete iron salvage bags: /t {Core.CharacterFilter.Name}, retrieve iron salvage (100)",
-                $"/r partial salvage bags: /t {Core.CharacterFilter.Name}, xadd salvage \\([0-9]{{1,2}}\\)"};
-            SendChatCommand(help);
+            else
+            {
+                string[] help = new string[] {
+                !SayWotM8 ? $"/t {toWho},  Hello. I can mule for you.  Open up a trade window!" : "",
+                SayWotM8 ? $"/t {toWho},  Sorry, I don't understand that command." : "",
+                $"/t {toWho}, {commands}",
+                $"/t {toWho}, search for diamond powders across all characters: /t {Core.CharacterFilter.Name}, search diamond powder",
+                $"/t {toWho}, retrieve item(s) either on this character or on another.  Switches characters if needed.",
+                $"/t {toWho}, from a specific character: /t {Core.CharacterFilter.Name}, retrieve MuleMan I, quiddity ingot",
+                $"/t {toWho}, switch to a character tagged weapons: /t {Core.CharacterFilter.Name}, switch weapons",
+                $"/t {toWho}, get a list of all tagged characters and their tags: /t {Core.CharacterFilter.Name}, tags",
+                $"/t {toWho}, tag me as salvage to make things easier: /t {Core.CharacterFilter.Name}, tag salvage",
+                $"/t {toWho}, add all quill types to trade window: /t {Core.CharacterFilter.Name}, add quill",
+                $"/t {toWho}, all types of salvage bags: /t {Core.CharacterFilter.Name}, add salvage",
+                $"/t {toWho}, all types of complete salvage bags: /t {Core.CharacterFilter.Name}, add salvage (100)",
+                $"/t {toWho}, complete iron salvage bags: /t {Core.CharacterFilter.Name}, retrieve iron salvage (100)",
+                $"/t {toWho}, all partial salvage bags via regex: /t {Core.CharacterFilter.Name}, xadd salvage \\([0-9]{{1,2}}\\)"};
+                SendChatCommand(help);
+            }
         }
         private void DestroyChatEvents()
         {

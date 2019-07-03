@@ -124,7 +124,7 @@ namespace Warehouse
             {
                 if (TradePartnerName != "")
                 {
-                    SayHelp(false, true);
+                    SayHelp(TradePartnerName, false, true);
                 }
                 WorldObjectCollection woc = Core.WorldFilter.GetByOwner(Core.CharacterFilter.Id);
                 foreach (WorldObject wo in woc)

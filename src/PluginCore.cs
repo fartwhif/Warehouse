@@ -360,13 +360,21 @@ namespace Warehouse
         }
         private void ItemsTradeAddTimer_Tick(object sender, EventArgs e)
         {
-            if (PendingItemsToTradeAdd2.Count < 1)
+            try
             {
-                ItemsTradeAddTimer.Enabled = false;
-                return;
+                if (PendingItemsToTradeAdd2.Count < 1)
+                {
+                    ItemsTradeAddTimer.Enabled = false;
+                    return;
+                }
+                int id = PendingItemsToTradeAdd2.Dequeue().Id;
+                Host.Actions.TradeAdd(id);
             }
-            int id = PendingItemsToTradeAdd2.Dequeue().Id;
-            Host.Actions.TradeAdd(id);
+            catch (Exception)
+            {
+                //in the middle of logging out?
+                ItemsTradeAddTimer.Enabled = false;
+            }
         }
     }
 }
