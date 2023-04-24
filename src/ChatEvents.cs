@@ -214,6 +214,10 @@ namespace Warehouse
         }
         public void Tell(List<Item> items, string who)
         {
+            if (items == null)
+            {
+                return;
+            }
             List<string> lines = new List<string>();
             List<CharacterTag> tags = DBGetAllTags();
             if (items.Count < 1)
@@ -422,6 +426,8 @@ namespace Warehouse
             {
                 case "add":
                     WorldObjectCollection woc = Core.WorldFilter.GetByOwner(Core.CharacterFilter.Id);
+                    var equippedItems = GetEquippedItems();
+                    bool complaints = false;
                     foreach (WorldObject wo in woc)
                     {
                         string itemName = wo.RealName();
@@ -429,7 +435,10 @@ namespace Warehouse
                         {
                             if (wo.ObjectClass != ObjectClass.Container)
                             {
-                                PendingItemsToTradeAdd.Add(wo);
+                                if (AddPendingItemToTrade(equippedItems, wo, chatMessage.ChatterName, show))
+                                {
+                                    complaints = true;
+                                }
                             }
                         }
                         else if (number && wo.Exists(LongValueKey.Value))
@@ -437,7 +446,10 @@ namespace Warehouse
                             int value = wo.Values(LongValueKey.Value);
                             if (numberParsed == value)
                             {
-                                PendingItemsToTradeAdd.Add(wo);
+                                if (AddPendingItemToTrade(equippedItems, wo, chatMessage.ChatterName, show))
+                                {
+                                    complaints = true;
+                                }
                             }
                         }
                         else if (number && wo.Exists(LongValueKey.TotalValue))
@@ -445,7 +457,10 @@ namespace Warehouse
                             int value = wo.Values(LongValueKey.TotalValue);
                             if (numberParsed == value)
                             {
-                                PendingItemsToTradeAdd.Add(wo);
+                                if (AddPendingItemToTrade(equippedItems, wo, chatMessage.ChatterName, show))
+                                {
+                                    complaints = true;
+                                }
                             }
                         }
                         else if (regex)
@@ -455,7 +470,10 @@ namespace Warehouse
                             {
                                 if (wo.ObjectClass != ObjectClass.Container)
                                 {
-                                    PendingItemsToTradeAdd.Add(wo);
+                                    if (AddPendingItemToTrade(equippedItems, wo, chatMessage.ChatterName, show))
+                                    {
+                                        complaints = true;
+                                    }
                                 }
                             }
                         }
@@ -463,13 +481,19 @@ namespace Warehouse
                         {
                             if (wo.ObjectClass != ObjectClass.Container)
                             {
-                                PendingItemsToTradeAdd.Add(wo);
+                                if (AddPendingItemToTrade(equippedItems, wo, chatMessage.ChatterName, show))
+                                {
+                                    complaints = true;
+                                }
                             }
                         }
                     }
                     if (PendingItemsToTradeAdd.Count < 1)
                     {
-                        SendChatCommand($"/t {chatMessage.ChatterName}, no items found");
+                        if (!complaints)
+                        {
+                            SendChatCommand($"/t {chatMessage.ChatterName}, no items found");
+                        }
                     }
                     AddPendingItemsToTrade();
                     break;
@@ -479,6 +503,40 @@ namespace Warehouse
                     Host.Actions.TradeReset();
                     break;
             }
+        }
+        public List<WorldObject> GetEquippedItems()
+        {
+            var list = new List<WorldObject>();
+            using (var inv = Core.WorldFilter.GetInventory())
+            {
+                foreach (var item in inv)
+                {
+                    if (item.Values(LongValueKey.Slot, -1) == -1)
+                    {
+                        list.Add(item);
+                    }
+                }
+            }
+            return list;
+        }
+
+        private bool AddPendingItemToTrade(List<WorldObject> equippedItems, WorldObject wo, string chatterName = null, bool show = false)
+        {
+            bool complaint = false;
+            var thisItem = equippedItems.FirstOrDefault(k => k.Id == wo.Id);
+            if (thisItem == null)
+            {
+                PendingItemsToTradeAdd.Add(wo);
+            }
+            else if (!string.IsNullOrEmpty(chatterName))
+            {
+                if (!show)//if it's an "add" or "fetch"
+                {
+                    SendChatCommand($"/t {chatterName}, I'm not that kind of bot!");
+                    complaint = true;
+                }
+            }
+            return complaint;
         }
         private string VersionString
         {

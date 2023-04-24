@@ -53,11 +53,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="ACWatchDog.Interop">
-      <HintPath>..\dep\ACWatchDog\ACWatchDog.Interop\bin\Debug\ACWatchDog.Interop.dll</HintPath>
+      <HintPath>..\..\ACWatchDog\ACWatchDog.Interop\bin\Debug\ACWatchDog.Interop.dll</HintPath>
     </Reference>
     <Reference Include="Decal.Adapter, Version=2.9.5.0, Culture=neutral, PublicKeyToken=bd1c8ce002ce221e, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\Program Files (x86)\Decal 3.0\Decal.Adapter.dll</HintPath>
+      <HintPath>..\..\..\..\..\Program Files (x86)\Decal 3.0\Decal.Adapter.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Decal.Interop.Inject, Version=2.9.5.0, Culture=neutral, PublicKeyToken=481f17d392f1fb65, processorArchitecture=MSIL">
@@ -180,7 +180,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PreBuildEvent>copy /Y "$(SolutionDir)..\dep\ACWatchDog\ACWatchDog\bin\Debug\ACWatchDog.exe" "$(SolutionDir)"</PreBuildEvent>
+    <PreBuildEvent>copy /Y "$(SolutionDir)\..\..\ACWatchDog\ACWatchDog\bin\Debug\ACWatchDog.exe" "$(SolutionDir)"</PreBuildEvent>
     <PostBuildEvent>mkdir C:\Games\warehouse
 Robocopy /S $(TargetDir) "C:\Games\Decal Plugins\Warehouse"
 mkdir "C:\vboxshared\warehouse\"

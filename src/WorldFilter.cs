@@ -95,6 +95,7 @@ namespace Warehouse
         private void WorldFilter_EnterTrade(object sender, EnterTradeEventArgs e)
         {
             WorldObjectCollection players = Core.WorldFilter.GetByObjectClass(ObjectClass.Player);
+            var equippedItems = GetEquippedItems();
             int myId = Core.CharacterFilter.Id;
             foreach (WorldObject player in players.Where(k => k.Id != myId))
             {
@@ -113,7 +114,7 @@ namespace Warehouse
                     {
                         if (GivingItems.Contains(wo.Id))
                         {
-                            PendingItemsToTradeAdd.Add(wo);
+                            AddPendingItemToTrade(equippedItems, wo, TradePartnerName);
                         }
                     }
                 }
@@ -131,7 +132,7 @@ namespace Warehouse
                 {
                     if (wo.ObjectClass != ObjectClass.Container)
                     {
-                        PendingItemsToTradeAdd.Add(wo);
+                        AddPendingItemToTrade(equippedItems, wo);
                     }
                 }
                 AddPendingItemsToTrade();
