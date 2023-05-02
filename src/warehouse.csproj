@@ -180,7 +180,7 @@
   </Target>
   -->
   <PropertyGroup>
-    <PreBuildEvent>copy /Y "$(SolutionDir)\..\..\ACWatchDog\ACWatchDog\bin\Debug\ACWatchDog.exe" "$(SolutionDir)"</PreBuildEvent>
+    <PreBuildEvent>copy /Y "$(SolutionDir)..\..\ACWatchDog\ACWatchDog\bin\Debug\ACWatchDog.exe" "$(SolutionDir)"</PreBuildEvent>
     <PostBuildEvent>mkdir C:\Games\warehouse
 Robocopy /S $(TargetDir) "C:\Games\Decal Plugins\Warehouse"
 mkdir "C:\vboxshared\warehouse\"

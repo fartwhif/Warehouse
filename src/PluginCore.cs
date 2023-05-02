@@ -165,6 +165,8 @@ namespace Warehouse
             {
                 if ((TimeSinceWatchDogBark?.Elapsed.TotalSeconds ?? int.MaxValue) > 5)
                 {
+                    //todo: check for server choke screen
+
                     TimeSinceWatchDogBark = Stopwatch.StartNew();
                     AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
                     if (!WatchDogRegistered && resp != null)
