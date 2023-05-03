@@ -165,20 +165,23 @@ namespace Warehouse
             {
                 if ((TimeSinceWatchDogBark?.Elapsed.TotalSeconds ?? int.MaxValue) > 5)
                 {
-                    //todo: check for server choke screen
-
-                    TimeSinceWatchDogBark = Stopwatch.StartNew();
-                    AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
-                    if (!WatchDogRegistered && resp != null)
+                    // at char select, or server choke, then "LoginNotComplete"
+                    // char logged in, then "Adventurer"
+                    if (Core.CharacterFilter.ClassTemplate == "Adventurer")
                     {
-                        WatchDogRegistered = true;
-                        Log($"Registered with watchdog, pool occupancy: {resp.PoolSize + 1}");
+                        TimeSinceWatchDogBark = Stopwatch.StartNew();
+                        AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
+                        if (!WatchDogRegistered && resp != null)
+                        {
+                            WatchDogRegistered = true;
+                            Log($"Registered with watchdog, pool occupancy: {resp.PoolSize + 1}");
+                        }
                     }
                 }
                 if (FirstInner)
                 {
                     Log($"CAUTION: Warehouse {VersionString} is running");
-                    Log($"Anyone near you can take all your non-attuned items.");
+                    Log($"Anyone near you can take all your non-attuned non-equipped items.");
                     Log($"Commands: whallowretrieve, whplayerdetectionjump, whallowjumpcmd");
                     FirstInner = false;
                 }
