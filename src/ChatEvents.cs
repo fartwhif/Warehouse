@@ -126,6 +126,13 @@ namespace Warehouse
         }
         private void HandleChatMessage(ChatMessage chatMessage)
         {
+            //"[Trade]"
+            //"[Allegiance]"
+            //Channel = "[General]"
+            if (!chatMessage.IsTell || chatMessage.Channel != "")
+            {
+                return;//only handle tells
+            }
             if (chatMessage.Message.ToLower().StartsWith("help"))
             {
                 SayHelp(chatMessage.ChatterName, false, false);

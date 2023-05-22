@@ -3,7 +3,7 @@
 !define APPNAME "Warehouse"
 !define NFNAME "WarehouseFilter"
 !define SOFTWARECOMPANY "FartwhifDecalPlugins"
-!define VERSION	"0.4.4"
+!define VERSION	"0.4.5"
 !define APPGUID "{DA4BFDDC-C110-45CE-8D08-4BD45C34CC2C}"
 
 !define ASSEMBLY "Warehouse.dll"
