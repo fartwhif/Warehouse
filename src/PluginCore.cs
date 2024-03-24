@@ -161,6 +161,25 @@ namespace Warehouse
         }
         private void MainLoopTimer_Tick(object sender, EventArgs e)
         {
+            paket _ffg  = null;
+            do
+            {
+                _ffg = null;
+                if (WarehouseFilterGlobals.messages.Any())
+                {
+                    _ffg = WarehouseFilterGlobals.messages.Dequeue();
+                    if (_ffg != null)
+                    {
+                        if (_ffg.Type == 0x02CD)
+                        {
+                            WarehouseFilterGlobals.MostRecent_0x02CD_Packet = DateTime.Now;
+                        }
+                        //Log($"message from server: {_ffg.Type:X4}");
+                    }
+                }
+            }
+            while (_ffg != null);
+
             if (loggedIn && TimeSinceLoginStarted != null && TimeSinceLoginStarted.Elapsed.TotalSeconds > 13)
             {
                 if ((TimeSinceWatchDogBark?.Elapsed.TotalSeconds ?? int.MaxValue) > 5)
@@ -169,12 +188,15 @@ namespace Warehouse
                     // char logged in, then "Adventurer"
                     if (Core.CharacterFilter.ClassTemplate == "Adventurer")
                     {
-                        TimeSinceWatchDogBark = Stopwatch.StartNew();
-                        AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
-                        if (!WatchDogRegistered && resp != null)
+                        if (WarehouseFilterGlobals.MostRecent_0x02CD_Packet + TimeSpan.FromSeconds(15) > DateTime.Now)
                         {
-                            WatchDogRegistered = true;
-                            Log($"Registered with watchdog, pool occupancy: {resp.PoolSize + 1}");
+                            TimeSinceWatchDogBark = Stopwatch.StartNew();
+                            AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
+                            if (!WatchDogRegistered && resp != null)
+                            {
+                                WatchDogRegistered = true;
+                                Log($"Registered with watchdog, pool occupancy: {resp.PoolSize + 1}");
+                            }
                         }
                     }
                 }

@@ -40,6 +40,14 @@ namespace Warehouse
         /// <remarks>Copied from Mag-Filter by Magnus, THANK YOU!!!</remarks>
         internal void FilterCore_ServerDispatch(object sender, NetworkMessageEventArgs e)
         {
+            if (WarehouseFilterGlobals.PluginCoreStarted)
+            {
+                WarehouseFilterGlobals.messages.Enqueue(new paket()
+                {
+                    Type = e.Message.Type,
+                    when = DateTime.Now
+                });
+            }
             if (e.Message.Type == 0xF658) // Character List
             {
                 WarehouseFilterGlobals.CharacterSlots = Convert.ToInt32(e.Message["slotCount"]);
