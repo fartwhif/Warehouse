@@ -161,7 +161,7 @@ namespace Warehouse
         }
         private void MainLoopTimer_Tick(object sender, EventArgs e)
         {
-            paket _ffg  = null;
+            paket _ffg = null;
             do
             {
                 _ffg = null;
@@ -186,17 +186,23 @@ namespace Warehouse
                 {
                     // at char select, or server choke, then "LoginNotComplete"
                     // char logged in, then "Adventurer"
-                    if (Core.CharacterFilter.ClassTemplate == "Adventurer")
+                    //if (Core.CharacterFilter.ClassTemplate == "Adventurer" || Core.CharacterFilter.ClassTemplate == "Soldier")
+                    if (Core.CharacterFilter.ClassTemplate != "LoginNotComplete")
                     {
                         if (WarehouseFilterGlobals.MostRecent_0x02CD_Packet + TimeSpan.FromSeconds(15) > DateTime.Now)
                         {
                             TimeSinceWatchDogBark = Stopwatch.StartNew();
+                            //Log($"Attempting send watchdog canary");
                             AppMessage resp = Client.Send(AppMessage.New($"Warehouse for {Core.CharacterFilter.AccountName}", 90, true));
                             if (!WatchDogRegistered && resp != null)
                             {
                                 WatchDogRegistered = true;
                                 Log($"Registered with watchdog, pool occupancy: {resp.PoolSize + 1}");
                             }
+                        }
+                        else
+                        {
+                            Log($"Time since MostRecent_0x02CD_Packet: {(DateTime.Now - WarehouseFilterGlobals.MostRecent_0x02CD_Packet)}");
                         }
                     }
                 }
